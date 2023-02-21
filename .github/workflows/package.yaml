@@ -1,0 +1,53 @@
+name: package pack
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: package mcaddons
+      id: package
+      run: |
+        mkdir --parents build/angelsresourcepack
+        zip -r build/angelsresourcepack.zip assets pack.*
+        echo "date=$(date +'%Y-%m-%d-%H-%M')" >> $GITHUB_OUTPUT
+        
+    - uses: actions/upload-artifact@master
+      with:
+        name: upload artifacts
+        path: build/*.zip
+
+    - name: Create release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.package.outputs.date }}
+        release_name: Release ${{ steps.package.outputs.date }}
+        body: |
+          New release ${{ steps.package.outputs.date }}
+        draft: true
+        prerelease: false
+
+    - name: Upload release asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: build/angelsresourcepack.zip
+        asset_name: angelsresourcepack.zip
+        asset_content_type: application/zip
+
+    - name: Publish release
+      uses: StuYarrow/publish-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        id: ${{ steps.create_release.outputs.id }}
